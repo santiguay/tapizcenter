@@ -1,4 +1,4 @@
-name: Deploy TapizCenter
+name: CI/CD Deployment
 
 on:
   push:
@@ -9,25 +9,22 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Deploy via SSH
+    steps:
+      - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # Navigate to the deployment folder
-            cd /var/www/tapicenter || exit 1
-            
-            # Reset any local modifications and pull latest main/master branch
-            git fetch --all
-            git reset --hard origin/$(git symbolic-ref --short HEAD)
-            
-            # Rebuild and run with Docker Compose
-            docker compose down
-            docker compose up -d --build
+            mkdir -p ~/catalogos/${{ github.event.repository.name }}
+            cd ~/catalogos/${{ github.event.repository.name }}
+
+            git fetch origin ${{ github.ref_name }}
+            git checkout ${{ github.ref_name }} || git checkout -b ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
+
+            DOCKER_BUILDKIT=1 docker compose build --no-cache
+
+            docker compose up -d
