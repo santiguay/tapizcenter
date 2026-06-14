@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products, categories, applications } from '../data/products';
 
-export default function CatalogoPage() {
+function CatalogoContent() {
   const searchParams = useSearchParams();
   
   // State for search and filters
@@ -369,5 +369,17 @@ export default function CatalogoPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CatalogoPage() {
+  return (
+    <Suspense fallback={
+      <div className="section" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Cargando catálogo...</p>
+      </div>
+    }>
+      <CatalogoContent />
+    </Suspense>
   );
 }
