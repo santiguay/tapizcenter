@@ -1,0 +1,12 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tapicenter-web
+    restart: always
+    ports:
+      - "80:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production

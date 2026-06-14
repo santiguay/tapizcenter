@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 100" width="100%" height="100%">
+  <defs>
+    <!-- Premium Gold Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4AF37" />
+      <stop offset="30%" stop-color="#FFF3A8" />
+      <stop offset="70%" stop-color="#D4AF37" />
+      <stop offset="100%" stop-color="#AA7C11" />
+    </linearGradient>
+    
+    <!-- Royal Blue Subtle Gradient -->
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0F2027" />
+      <stop offset="50%" stop-color="#203A43" />
+      <stop offset="100%" stop-color="#2C5364" />
+    </linearGradient>
+    
+    <!-- Drop Shadow for Premium Feel -->
+    <filter id="goldGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#D4AF37" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Background is transparent but the elements stand out -->
+  
+  <!-- Icon Logo Group -->
+  <g transform="translate(10, 10)">
+    <!-- Stylized Armchair / Fabric Fold Icon -->
+    <!-- Curved back representing upholstery, gold highlights -->
+    <path d="M 40,20 C 15,20 10,40 10,60 C 10,75 20,80 40,80 C 60,80 70,75 70,60 C 70,40 65,20 40,20 Z" 
+          fill="none" stroke="url(#goldGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#goldGlow)" />
+    <!-- Inner curves indicating woven fibers / capitoné diamond -->
+    <path d="M 40,20 L 40,80" fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.8" stroke-dasharray="3,3" />
+    <path d="M 10,60 Q 40,50 70,60" fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.8" />
+    
+    <!-- Elegant diamonds/buttons representing Capitoné style -->
+    <circle cx="40" cy="50" r="3" fill="url(#goldGrad)" />
+    <circle cx="28" cy="40" r="2.5" fill="url(#goldGrad)" opacity="0.8" />
+    <circle cx="52" cy="40" r="2.5" fill="url(#goldGrad)" opacity="0.8" />
+    
+    <!-- Wings of the chair/upholstery needles -->
+    <path d="M 5,35 Q 20,38 35,32" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+    <path d="M 75,35 Q 60,38 45,32" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+  </g>
+
+  <!-- Typography Group -->
+  <g transform="translate(100, 0)">
+    <!-- Brand Name -->
+    <text x="0" y="52" font-family="'Montserrat', 'Inter', system-ui, sans-serif" font-size="34" font-weight="800" letter-spacing="3" fill="#FFFFFF">
+      TAPIZ
+      <tspan fill="url(#goldGrad)">CENTER</tspan>
+    </text>
+    
+    <!-- Subtitle -->
+    <text x="3" y="74" font-family="'Inter', system-ui, sans-serif" font-size="12" font-weight="500" letter-spacing="7.5" fill="#A0AEC0" opacity="0.9">
+      TEXTILES &amp; CUEROS EXCLUSIVOS
+    </text>
+  </g>
+</svg>

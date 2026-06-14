@@ -1,0 +1,33 @@
+name: Deploy TapizCenter
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            # Navigate to the deployment folder
+            cd /var/www/tapicenter || exit 1
+            
+            # Reset any local modifications and pull latest main/master branch
+            git fetch --all
+            git reset --hard origin/$(git symbolic-ref --short HEAD)
+            
+            # Rebuild and run with Docker Compose
+            docker compose down
+            docker compose up -d --build
