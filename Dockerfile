@@ -39,6 +39,9 @@ COPY --from=builder /app/public ./public
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
+# Ensure prisma directory exists and is writable by nextjs
+RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
+
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
