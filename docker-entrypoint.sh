@@ -12,9 +12,9 @@ if [ ! -f "$DB_FILE" ]; then
   FIRST_RUN=true
 fi
 
-# Run schema push to ensure database matches schema
+# Run schema push to ensure database matches schema without triggering the global prisma client generator which fails on read-only global paths
 echo "Running prisma db push..."
-prisma db push --accept-data-loss
+npx prisma db push --accept-data-loss --skip-generate
 
 # If it's the first run, seed the database
 if [ "$FIRST_RUN" = true ]; then
@@ -27,3 +27,4 @@ fi
 # Start the application
 echo "Starting application..."
 exec "$@"
+
