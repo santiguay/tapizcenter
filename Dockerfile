@@ -20,6 +20,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm prisma generate
 RUN pnpm run build
 
 # 3. Production image, copy all the files and run next
