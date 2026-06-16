@@ -30,6 +30,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install Alpine dependencies and global Prisma CLI
+RUN apk add --no-cache libc6-compat openssl
+RUN npm install -g prisma@6.19.3
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -42,9 +46,19 @@ RUN chown nextjs:nodejs .next
 # Ensure prisma directory exists and is writable by nextjs
 RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
 
+# Copy prisma schema and seed to backup directory so they are always up-to-date
+# even when /app/prisma is overridden by a volume mount
+RUN mkdir -p /app/prisma_backup && chown -R nextjs:nodejs /app/prisma_backup
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma /app/prisma_backup/schema.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/seed.js /app/prisma_backup/seed.js
+
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy and set up the entrypoint script
+COPY --chown=nextjs:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 USER nextjs
 
@@ -53,4 +67,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
