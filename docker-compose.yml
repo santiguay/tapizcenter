@@ -6,7 +6,14 @@ services:
     container_name: tapicenter-web
     restart: always
     ports:
-      - "5025:3000"
+      - "5026:3000"
     environment:
       - PORT=3000
       - NODE_ENV=production
+      - DATABASE_URL=file:/app/prisma/dev.db
+      - JWT_SECRET=tapizcenter-super-secret-key-12345
+    volumes:
+      - prisma-data:/app/prisma
+
+volumes:
+  prisma-data:

@@ -2,95 +2,147 @@
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { products, categories, applications } from '../data/products';
+
+function getColorHex(colorName) {
+  if (!colorName) return '#778da9';
+  const name = colorName.toLowerCase().trim();
+  if (name.includes('azul real') || name.includes('royal blue')) return '#002060';
+  if (name.includes('blanco polar') || name.includes('blanco nieve')) return '#FFFFFF';
+  if (name.includes('beige')) return '#E1D3BE';
+  if (name.includes('gris grafito') || name.includes('grafito') || name.includes('gris oscuro')) return '#4A4A4A';
+  if (name.includes('azul índigo') || name.includes('indigo') || name.includes('azul marino')) return '#0A1B3A';
+  if (name.includes('verde esmeralda') || name.includes('esmeralda')) return '#0B4D3A';
+  if (name.includes('lino natural') || name.includes('crudo') || name.includes('natural')) return '#F5F2EB';
+  if (name.includes('azul denim') || name.includes('denim')) return '#2E3033';
+  return '#778da9'; // Fallback gray
+}
 
 function CatalogoContent() {
   const searchParams = useSearchParams();
   
+  const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [sublines, setSublines] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   // State for search and filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedApplications, setSelectedApplications] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedSublines, setSelectedSublines] = useState([]);
   
   // State for Modal
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  useEffect(() => {
+    async function loadCatalog() {
+      try {
+        const [resProd, resBrand, resSub] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/brands'),
+          fetch('/api/sublines'),
+        ]);
+
+        const dataProd = await resProd.json();
+        const dataBrand = await resBrand.json();
+        const dataSub = await resSub.json();
+
+        setProducts(dataProd);
+        setBrands(dataBrand);
+        setSublines(dataSub);
+      } catch (err) {
+        console.error('Error loading catalog:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCatalog();
+  }, []);
 
   // Initialize filters from URL query parameters if they exist
   useEffect(() => {
-    const catParam = searchParams.get('category');
-    const appParam = searchParams.get('app');
+    const brandParam = searchParams.get('brand');
+    const subParam = searchParams.get('subline');
     
-    if (catParam) {
-      setSelectedCategories([catParam]);
+    if (brandParam) {
+      setSelectedBrands([brandParam]);
     }
-    if (appParam) {
-      setSelectedApplications([appParam]);
+    if (subParam) {
+      setSelectedSublines([subParam]);
     }
   }, [searchParams]);
 
-  // Handle category checkbox changes
-  const handleCategoryChange = (categoryId) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+  // Handle brand checkbox changes
+  const handleBrandChange = (brandId) => {
+    setSelectedBrands(prev => 
+      prev.includes(brandId)
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId]
     );
   };
 
-  // Handle application checkbox changes
-  const handleAppChange = (appId) => {
-    setSelectedApplications(prev => 
-      prev.includes(appId)
-        ? prev.filter(id => id !== appId)
-        : [...prev, appId]
+  // Handle subline checkbox changes
+  const handleSublineChange = (subId) => {
+    setSelectedSublines(prev => 
+      prev.includes(subId)
+        ? prev.filter(id => id !== subId)
+        : [...prev, subId]
     );
   };
 
-  // Filter products based on search query, category, and application
+  // Filter products based on search query, brand, and subline
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
       // Search term filter
       const matchesSearch = searchQuery.trim() === '' || 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
+        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        product.brand?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.subLine?.name && product.subLine.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // Category filter
-      const matchesCategory = selectedCategories.length === 0 || 
-        selectedCategories.includes(product.category);
+      // Brand filter
+      const matchesBrand = selectedBrands.length === 0 || 
+        selectedBrands.includes(product.brandId);
 
-      // Application filter
-      const matchesApp = selectedApplications.length === 0 || 
-        product.applications.some(app => selectedApplications.includes(app));
+      // Subline filter
+      const matchesSubline = selectedSublines.length === 0 || 
+        (product.subLineId && selectedSublines.includes(product.subLineId));
 
-      return matchesSearch && matchesCategory && matchesApp;
+      return matchesSearch && matchesBrand && matchesSubline;
     });
-  }, [searchQuery, selectedCategories, selectedApplications]);
+  }, [products, searchQuery, selectedBrands, selectedSublines]);
 
-  // Open modal and pre-select the first color variant
+  // Open modal and pre-select the first variant
   const openProductDetails = (product) => {
     setSelectedProduct(product);
     if (product.variants && product.variants.length > 0) {
-      setSelectedColor(product.variants[0]);
+      setSelectedVariant(product.variants[0]);
     } else {
-      setSelectedColor(null);
+      setSelectedVariant(null);
     }
   };
 
   const closeModal = () => {
     setSelectedProduct(null);
-    setSelectedColor(null);
+    setSelectedVariant(null);
   };
 
   // Generate WhatsApp message URL
   const whatsappUrl = useMemo(() => {
     if (!selectedProduct) return '';
     const phone = '5491100000000'; // Replace with TapizCenter actual business line
-    const colorText = selectedColor ? ` en color ${selectedColor.name}` : '';
-    const text = `Hola TapizCenter! Quisiera realizar una consulta por el producto "${selectedProduct.name}" (Código: ${selectedProduct.code})${colorText}.`;
+    const variantText = selectedVariant ? ` en variante ${selectedVariant.name} (${selectedVariant.color || ''})` : '';
+    const text = `Hola TapizCenter! Quisiera realizar una consulta por el producto "${selectedProduct.name}" (Marca: ${selectedProduct.brand?.name || 'TapizCenter Selection'})${variantText}.`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-  }, [selectedProduct, selectedColor]);
+  }, [selectedProduct, selectedVariant]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: '1.2rem', color: 'var(--color-navy-dark)', fontWeight: '600' }}>Cargando catálogo...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="section" style={{ minHeight: '80vh' }}>
@@ -100,7 +152,7 @@ function CatalogoContent() {
         <div style={{ marginBottom: '3rem', borderLeft: '4px solid var(--color-gold)', paddingLeft: '1.5rem' }}>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 900 }}>Catálogo de Materiales</h1>
           <p style={{ color: 'var(--color-navy-light)', fontSize: '1.05rem', marginTop: '0.25rem' }}>
-            Explorá nuestra línea exclusiva de telas, cuerinas y espumas seleccionadas para tapicería profesional.
+            Explorá nuestra línea exclusiva de telas, cuerinas y sintéticos premium.
           </p>
         </div>
 
@@ -110,49 +162,49 @@ function CatalogoContent() {
           {/* Sidebar Filters */}
           <aside className="filters-sidebar">
             <div className="filter-group">
-              <h3 className="filter-group-title">Categorías</h3>
+              <h3 className="filter-group-title">Marcas</h3>
               <div className="filter-options">
-                {categories.map(cat => (
-                  <label key={cat.id} className="filter-option">
+                {brands.map(brand => (
+                  <label key={brand.id} className="filter-option">
                     <input 
                       type="checkbox" 
-                      checked={selectedCategories.includes(cat.id)}
-                      onChange={() => handleCategoryChange(cat.id)}
+                      checked={selectedBrands.includes(brand.id)}
+                      onChange={() => handleBrandChange(brand.id)}
                     />
-                    {cat.name}
+                    {brand.name}
                   </label>
                 ))}
               </div>
             </div>
 
             <div className="filter-group">
-              <h3 className="filter-group-title">Aplicaciones</h3>
+              <h3 className="filter-group-title">Sublíneas</h3>
               <div className="filter-options">
-                {applications.map(app => (
-                  <label key={app.id} className="filter-option">
+                {sublines.map(sub => (
+                  <label key={sub.id} className="filter-option">
                     <input 
                       type="checkbox" 
-                      checked={selectedApplications.includes(app.id)}
-                      onChange={() => handleAppChange(app.id)}
+                      checked={selectedSublines.includes(sub.id)}
+                      onChange={() => handleSublineChange(sub.id)}
                     />
-                    {app.name}
+                    {sub.name}
                   </label>
                 ))}
               </div>
             </div>
 
             {/* Clear filters action */}
-            {(selectedCategories.length > 0 || selectedApplications.length > 0 || searchQuery !== '') && (
+            {(selectedBrands.length > 0 || selectedSublines.length > 0 || searchQuery !== '') && (
               <button 
                 onClick={() => {
-                  setSelectedCategories([]);
-                  setSelectedApplications([]);
+                  setSelectedBrands([]);
+                  setSelectedSublines([]);
                   setSearchQuery('');
                 }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--color-gold-dark)',
+                  color: 'var(--color-navy-light)',
                   fontWeight: 700,
                   fontSize: '0.85rem',
                   cursor: 'pointer',
@@ -177,7 +229,7 @@ function CatalogoContent() {
                 <input 
                   type="text" 
                   className="search-input" 
-                  placeholder="Buscar por nombre, código o características..." 
+                  placeholder="Buscar por nombre, marca o características..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -197,8 +249,8 @@ function CatalogoContent() {
                 </p>
                 <button 
                   onClick={() => {
-                    setSelectedCategories([]);
-                    setSelectedApplications([]);
+                    setSelectedBrands([]);
+                    setSelectedSublines([]);
                     setSearchQuery('');
                   }}
                   className="btn btn-secondary"
@@ -216,26 +268,29 @@ function CatalogoContent() {
                     onClick={() => openProductDetails(product)}
                   >
                     {/* Top image section (themed placeholder with visual cues) */}
-                    <div className="product-img-placeholder">
-                      <span className="product-category-badge">{product.category}</span>
+                    <div className="product-img-placeholder" style={{
+                      backgroundImage: product.image ? `url(${product.image})` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}>
+                      <span className="product-category-badge">{product.brand?.name}</span>
                       
-                      <div className="product-icon-symbol">
-                        {product.category === 'Telas' && '🛋️'}
-                        {product.category === 'Cuerinas' && '⛵'}
-                        {product.category === 'Espumas' && '🧽'}
-                        {product.category === 'Insumos' && '🧵'}
-                      </div>
+                      {!product.image && (
+                        <div className="product-icon-symbol">
+                          {product.brand?.name.toLowerCase().includes('cipatex') ? '⛵' : '🛋️'}
+                        </div>
+                      )}
                       
                       <div className="product-app-badges">
-                        {product.applications.map(app => (
-                          <span key={app} className="product-app-badge">{app}</span>
-                        ))}
+                        {product.subLine && (
+                          <span className="product-app-badge">{product.subLine.name}</span>
+                        )}
                       </div>
                     </div>
 
                     {/* Bottom Info Section */}
                     <div className="product-info">
-                      <span className="product-code">{product.code}</span>
+                      <span className="product-code">{product.brand?.name}</span>
                       <h3 className="product-name">{product.name}</h3>
                       <p className="product-description-excerpt">{product.description}</p>
                       
@@ -246,15 +301,17 @@ function CatalogoContent() {
                             <span 
                               key={i} 
                               className="swatch-circle" 
-                              style={{ backgroundColor: v.hex }} 
-                              title={v.name}
+                              style={{ backgroundColor: getColorHex(v.color) }} 
+                              title={`${v.name} (${v.color || ''})`}
                             />
                           ))}
                         </div>
                       )}
 
                       <div className="product-footer">
-                        <span className="product-price-label">{product.price}</span>
+                        <span className="product-price-label">
+                          {product.variants?.[0]?.price ? `USD ${product.variants[0].price.toFixed(2)}` : 'Consultar'}
+                        </span>
                         <span className="product-cta-text">
                           Ver Detalle →
                         </span>
@@ -278,69 +335,89 @@ function CatalogoContent() {
             
             <div className="modal-body">
               {/* Image / Icon banner */}
-              <div className="modal-img-section">
+              <div className="modal-img-section" style={{
+                backgroundImage: selectedProduct.image ? `url(${selectedProduct.image})` : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}>
                 <span className="product-category-badge" style={{ left: '20px', top: '20px' }}>
-                  {selectedProduct.category}
+                  {selectedProduct.brand?.name}
                 </span>
-                <div className="modal-img-symbol">
-                  {selectedProduct.category === 'Telas' && '🛋️'}
-                  {selectedProduct.category === 'Cuerinas' && '⛵'}
-                  {selectedProduct.category === 'Espumas' && '🧽'}
-                  {selectedProduct.category === 'Insumos' && '🧵'}
-                </div>
-                <h3 style={{ fontSize: '1.25rem', letterSpacing: '1px' }}>{selectedProduct.code}</h3>
+                {!selectedProduct.image && (
+                  <div className="modal-img-symbol">
+                    {selectedProduct.brand?.name.toLowerCase().includes('cipatex') ? '⛵' : '🛋️'}
+                  </div>
+                )}
               </div>
 
               {/* Data and CTA Info */}
               <div className="modal-info-section">
                 <div className="modal-title-group">
-                  <span className="modal-category">{selectedProduct.category}</span>
+                  <span className="modal-category">{selectedProduct.brand?.name}</span>
                   <h2 className="modal-title">{selectedProduct.name}</h2>
-                  <span className="modal-code">Código: {selectedProduct.code}</span>
+                  {selectedProduct.subLine && (
+                    <span className="modal-code">Línea: {selectedProduct.subLine.name}</span>
+                  )}
                 </div>
 
                 <p className="modal-desc">{selectedProduct.description}</p>
 
-                {/* Specs list */}
-                {selectedProduct.specs && selectedProduct.specs.length > 0 && (
-                  <div>
-                    <h4 className="modal-variants-title" style={{ marginBottom: '0.5rem' }}>Especificaciones</h4>
-                    <table className="modal-specs-table">
-                      <tbody>
-                        {selectedProduct.specs.map((spec, i) => (
-                          <tr key={i}>
-                            <td className="modal-specs-label">{spec.label}</td>
-                            <td className="modal-specs-value">{spec.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                {/* Technical specs */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 className="modal-variants-title" style={{ marginBottom: '0.5rem' }}>Especificaciones</h4>
+                  <table className="modal-specs-table">
+                    <tbody>
+                      {selectedVariant?.size && (
+                        <tr>
+                          <td className="modal-specs-label">Dimensiones</td>
+                          <td className="modal-specs-value">{selectedVariant.size}</td>
+                        </tr>
+                      )}
+                      {selectedVariant?.sku && (
+                        <tr>
+                          <td className="modal-specs-label">SKU / Código</td>
+                          <td className="modal-specs-value">{selectedVariant.sku}</td>
+                        </tr>
+                      )}
+                      {selectedVariant?.color && (
+                        <tr>
+                          <td className="modal-specs-label">Color Seleccionado</td>
+                          <td className="modal-specs-value">{selectedVariant.color}</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <td className="modal-specs-label">Disponibilidad</td>
+                        <td className="modal-specs-value">
+                          {selectedVariant?.stock > 0 ? `En Stock (${selectedVariant.stock} mts)` : 'Consultar Disponibilidad'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
                 {/* Color Variants Swatches */}
                 {selectedProduct.variants && selectedProduct.variants.length > 0 && (
                   <div className="modal-variants-section">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 className="modal-variants-title">Variante / Color</h4>
-                      {selectedColor && (
-                        <span className="selected-variant-name">{selectedColor.name}</span>
+                      <h4 className="modal-variants-title">Variantes Disponibles</h4>
+                      {selectedVariant && (
+                        <span className="selected-variant-name">{selectedVariant.name}</span>
                       )}
                     </div>
                     <div className="modal-variants-grid">
-                      {selectedProduct.variants.map((v, i) => (
-                        <label key={i} className="variant-swatch-wrapper">
+                      {selectedProduct.variants.map((v) => (
+                        <label key={v.id} className="variant-swatch-wrapper">
                           <input 
                             type="radio" 
                             name="colorVariant"
                             className="variant-swatch-input"
-                            checked={selectedColor?.name === v.name}
-                            onChange={() => setSelectedColor(v)}
+                            checked={selectedVariant?.id === v.id}
+                            onChange={() => setSelectedVariant(v)}
                           />
                           <span className="variant-swatch-box">
                             <span 
                               className="variant-swatch-color" 
-                              style={{ backgroundColor: v.hex }}
+                              style={{ backgroundColor: getColorHex(v.color) }}
                             />
                           </span>
                         </label>
@@ -358,7 +435,7 @@ function CatalogoContent() {
                     className="btn whatsapp-btn"
                   >
                     <svg className="whatsapp-icon-svg" viewBox="0 0 24 24">
-                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.965C16.59 1.988 14.113.96 11.5.961c-5.437 0-9.862 4.371-9.866 9.8c-.001 1.762.485 3.478 1.411 5.014L2.08 19.829l6.567-1.714.001-.001-.001-.001zM17.432 14.3c-.321-.16-1.897-.936-2.197-1.047-.3-.11-.519-.16-.738.16-.219.32-.848 1.047-1.04 1.268-.192.22-.383.245-.704.084-.321-.16-1.353-.499-2.578-1.593-.953-.85-1.597-1.9-1.784-2.22-.187-.32-.02-.493.14-.653.145-.144.322-.375.483-.563.16-.188.214-.32.321-.534.107-.214.053-.401-.026-.562-.08-.16-.738-1.777-1.012-2.441-.267-.643-.539-.556-.738-.566-.19-.01-.41-.01-.628-.01-.219 0-.575.082-.876.411-.3.328-1.15 1.124-1.15 2.741 0 1.617 1.177 3.18 1.34 3.399.164.22 2.315 3.535 5.607 4.956.783.338 1.395.54 1.872.69.786.25 1.5.215 2.066.13.63-.095 1.897-.776 2.164-1.488.267-.713.267-1.324.187-1.448-.079-.124-.296-.204-.617-.364z"/>
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.965C16.59 1.988 14.113.96 11.5.961c-5.437 0-9.862 4.371-9.866 9.8' />
                     </svg>
                     Consultar por WhatsApp
                   </a>
