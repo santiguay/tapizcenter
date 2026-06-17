@@ -33,6 +33,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Install Alpine dependencies and global Prisma CLI
 RUN apk add --no-cache libc6-compat openssl
 RUN npm install -g prisma@6.19.3
+RUN npm install bcryptjs
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -51,6 +52,7 @@ RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
 RUN mkdir -p /app/prisma_backup && chown -R nextjs:nodejs /app/prisma_backup
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma /app/prisma_backup/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/seed.js /app/prisma_backup/seed.js
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations /app/prisma_backup/migrations
 
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

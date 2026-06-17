@@ -1,10 +1,12 @@
 #!/bin/sh
 set -e
 
-# Copy latest schema and seed files to ensure they are up to date in the volume
-echo "Updating schema and seed files in /app/prisma..."
+# Copy latest schema, migrations, and seed files to ensure they are up to date in the volume
+echo "Updating schema, migrations, and seed files in /app/prisma..."
 cp /app/prisma_backup/schema.prisma /app/prisma/schema.prisma
 cp /app/prisma_backup/seed.js /app/prisma/seed.js
+mkdir -p /app/prisma/migrations
+cp -r /app/prisma_backup/migrations/. /app/prisma/migrations/
 
 DB_FILE="/app/prisma/dev.db"
 FIRST_RUN=false
@@ -12,9 +14,9 @@ if [ ! -f "$DB_FILE" ]; then
   FIRST_RUN=true
 fi
 
-# Run schema push to ensure database matches schema without triggering the global prisma client generator which fails on read-only global paths
-echo "Running prisma db push..."
-npx prisma db push --accept-data-loss --skip-generate
+# Run migrations to ensure database matches schema
+echo "Running prisma migrate deploy..."
+npx prisma migrate deploy
 
 # If it's the first run, seed the database
 if [ "$FIRST_RUN" = true ]; then
